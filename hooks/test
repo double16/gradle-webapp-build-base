@@ -1,0 +1,10 @@
+#!/bin/bash -xe
+
+. ./hooks/env
+
+docker run $IMAGE_NAME docker version | grep 17.04.0-ce
+docker run $IMAGE_NAME docker-compose version | grep 1.12.0
+docker run $IMAGE_NAME gradle --version | grep 3.5
+docker run $IMAGE_NAME ruby --version | grep 2.4.1
+docker run $IMAGE_NAME python --version | grep 2.7.13
+

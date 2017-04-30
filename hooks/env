@@ -1,0 +1,11 @@
+set
+
+# These values are passed by the hub, but if they aren't we can get them from git.
+[ -n "$SOURCE_BRANCH" ]  || SOURCE_BRANCH=$(git symbolic-ref -q --short HEAD)
+[ -n "$GIT_SHA1" ] || GIT_SHA1=$(git rev-parse -q HEAD)
+
+# Set defaults for build arguments
+[ -n "$SOURCE_TYPE" ]        || SOURCE_TYPE=git
+[ -n "$DOCKERFILE_PATH" ]    || DOCKERFILE_PATH=.
+[ -n "$IMAGE_NAME" ]         || IMAGE_NAME=gradle-webapp-build-base:latest
+
