@@ -257,8 +257,7 @@ RUN set -ex \
 # install "virtualenv", since the vast majority of users of this image will want it
 RUN pip install --no-cache-dir virtualenv
 
-# CI environments need root access for docker
-#USER gradle
+USER gradle
 CMD ["gradle"]
 
 LABEL org.label-schema.build-date=$BUILD_DATE \
