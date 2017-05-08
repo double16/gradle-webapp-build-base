@@ -263,7 +263,7 @@ CMD ["gradle"]
 LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.docker.dockerfile="$DOCKERFILE_PATH/Dockerfile" \
       org.label-schema.license="GPLv2" \
-      org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
+      org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
       org.label-schema.url="https://bitbucket.org/double16/gradle-webapp-build-base" \
       org.label-schema.vcs-ref=$SOURCE_COMMIT \
       org.label-schema.vcs-type="$SOURCE_TYPE" \
