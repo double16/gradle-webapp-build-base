@@ -103,8 +103,8 @@ RUN set -o errexit -o nounset \
 # Docker 17.04.0-ce
 # Docker Compose 1.12.0
 #
-ENV DOCKER_VER 17.04.0-ce
-ENV DOCKER_COMPOSE_VER 1.12.0
+ENV DOCKER_VER 17.05.0-ce
+ENV DOCKER_COMPOSE_VER 1.13.0
 
 RUN curl -sL https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VER}.tgz | tar -xz -C /tmp && mv /tmp/docker/* /usr/bin && rm -rf /tmp/docker &&\
     curl -sL https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VER}/docker-compose-`uname -s`-`uname -m` -o /usr/bin/docker-compose && chmod +x /usr/bin/docker-compose
