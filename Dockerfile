@@ -100,8 +100,8 @@ RUN set -o errexit -o nounset \
 	&& gradle --version
 
 #
-# Docker 17.04.0-ce
-# Docker Compose 1.12.0
+# Docker
+# Docker Compose
 #
 ENV DOCKER_VER 17.05.0-ce
 ENV DOCKER_COMPOSE_VER 1.13.0
@@ -256,6 +256,11 @@ RUN set -ex \
 
 # install "virtualenv", since the vast majority of users of this image will want it
 RUN pip install --no-cache-dir virtualenv
+
+# Additional packages here so we can copy and paste updates to the above recipes
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		jq netcat-openbsd \
+	&& rm -rf /var/lib/apt/lists/*
 
 USER gradle
 CMD ["gradle"]
