@@ -262,7 +262,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 		jq netcat-openbsd \
 	&& rm -rf /var/lib/apt/lists/*
 
-USER gradle
+COPY entrypoint.sh /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gradle"]
 
 LABEL org.label-schema.build-date=$BUILD_DATE \
