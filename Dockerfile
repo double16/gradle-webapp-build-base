@@ -6,7 +6,7 @@ USER root
 #
 # OpenJDK 8
 #
-# https://github.com/docker-library/openjdk/blob/882461ade8207de7647d083009200de85eb978bc/8-jdk/Dockerfile
+# https://github.com/docker-library/openjdk/blob/master/8-jdk/Dockerfile
 
 # A few problems with compiling Java from source:
 #  1. Oracle.  Licensing prevents us from redistributing the official JDK.
@@ -34,10 +34,12 @@ RUN { \
 	} > /usr/local/bin/docker-java-home \
 	&& chmod +x /usr/local/bin/docker-java-home
 
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+# do some fancy footwork to create a JAVA_HOME that's cross-architecture-safe
+RUN ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home
+ENV JAVA_HOME /docker-java-home
 
-ENV JAVA_VERSION 8u121
-ENV JAVA_DEBIAN_VERSION 8u121-b13-1~bpo8+1
+ENV JAVA_VERSION 8u131
+ENV JAVA_DEBIAN_VERSION 8u131-b11-1~bpo8+1
 
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
@@ -53,12 +55,13 @@ RUN set -ex; \
 	rm -rf /var/lib/apt/lists/*; \
 	\
 # verify that "docker-java-home" returns what we expect
-	[ "$JAVA_HOME" = "$(docker-java-home)" ]; \
+	[ "$(readlink -f "$JAVA_HOME")" = "$(docker-java-home)" ]; \
 	\
 # update-alternatives so that future installs of other OpenJDK versions don't change /usr/bin/java
-	update-alternatives --get-selections | awk -v home="$JAVA_HOME" 'index($3, home) == 1 { $2 = "manual"; print | "update-alternatives --set-selections" }'; \
+	update-alternatives --get-selections | awk -v home="$(readlink -f "$JAVA_HOME")" 'index($3, home) == 1 { $2 = "manual"; print | "update-alternatives --set-selections" }'; \
 # ... and verify that it actually worked for one of the alternatives we care about
 	update-alternatives --query java | grep -q 'Status: manual'
+
 
 # see CA_CERTIFICATES_JAVA_VERSION notes above
 RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
@@ -261,6 +264,9 @@ RUN pip install --no-cache-dir virtualenv
 RUN apt-get update && apt-get install -y --no-install-recommends \
 		jq netcat-openbsd \
 	&& rm -rf /var/lib/apt/lists/*
+
+# These options tell Java to limit heap based on cgroup limits, so we can use Docker to limit memory instead of -Xmx like options
+ENV JAVA_OPTS "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
 
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
