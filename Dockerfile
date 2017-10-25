@@ -1,7 +1,30 @@
-FROM buildpack-deps:jessie
+FROM buildpack-deps:stretch-scm
 MAINTAINER "Patrick Double <pat@patdouble.com>"
 
 USER root
+
+# Collect all of the packages needed for our composite of tools into one place
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		bzip2 \
+		unzip \
+		xz-utils \
+		bison \
+		libgdbm-dev \
+		ruby \
+		autoconf \
+		gcc \
+		make \
+		zlib1g-dev \
+		libssl-dev \
+		tcl \
+		tk \
+		dpkg-dev \
+		tcl-dev \
+		tk-dev \
+		libssl-dev \
+                jq \
+                netcat-openbsd
 
 #
 # OpenJDK 8
@@ -12,13 +35,6 @@ USER root
 #  1. Oracle.  Licensing prevents us from redistributing the official JDK.
 #  2. Compiling OpenJDK also requires the JDK to be installed, and it gets
 #       really hairy.
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-		bzip2 \
-		unzip \
-		xz-utils \
-	&& rm -rf /var/lib/apt/lists/*
-
 RUN echo 'deb http://deb.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
 
 # Default to UTF-8 file.encoding
@@ -38,25 +54,21 @@ RUN { \
 RUN ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home
 ENV JAVA_HOME /docker-java-home
 
-ENV JAVA_VERSION 8u131
-ENV JAVA_DEBIAN_VERSION 8u131-b11-1~bpo8+1
+ENV JAVA_VERSION 8u141
+ENV JAVA_DEBIAN_VERSION 8u141-b15-1~deb9u1
 
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
-ENV CA_CERTIFICATES_JAVA_VERSION 20161107~bpo8+1
+ENV CA_CERTIFICATES_JAVA_VERSION 20170531+nmu1
 
 RUN set -ex; \
-	\
 	apt-get update; \
 	apt-get install -y \
 		openjdk-8-jdk="$JAVA_DEBIAN_VERSION" \
 		ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" \
 	; \
-	rm -rf /var/lib/apt/lists/*; \
-	\
 # verify that "docker-java-home" returns what we expect
 	[ "$(readlink -f "$JAVA_HOME")" = "$(docker-java-home)" ]; \
-	\
 # update-alternatives so that future installs of other OpenJDK versions don't change /usr/bin/java
 	update-alternatives --get-selections | awk -v home="$(readlink -f "$JAVA_HOME")" 'index($3, home) == 1 { $2 = "manual"; print | "update-alternatives --set-selections" }'; \
 # ... and verify that it actually worked for one of the alternatives we care about
@@ -67,27 +79,24 @@ RUN set -ex; \
 RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
 #
-# Gradle 3.5
+# Gradle 3.5.1
 #
 # https://github.com/keeganwitt/docker-gradle/blob/fac6450faeec2232e1ed15051a751236e40ffda2/jdk8/Dockerfile
 
 ENV GRADLE_HOME /opt/gradle
-ENV GRADLE_VERSION 3.5
+ENV GRADLE_VERSION 3.5.1
 
-ARG GRADLE_DOWNLOAD_SHA256=0b7450798c190ff76b9f9a3d02e18b33d94553f708ebc08ebe09bdf99111d110
+ARG GRADLE_DOWNLOAD_SHA256=8dce35f52d4c7b4a4946df73aa2830e76ba7148850753d8b5e94c5dc325ceef8
 RUN set -o errexit -o nounset \
 	&& echo "Downloading Gradle" \
 	&& wget --no-verbose --output-document=gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
-	\
 	&& echo "Checking download hash" \
 	&& echo "${GRADLE_DOWNLOAD_SHA256} *gradle.zip" | sha256sum --check - \
-	\
 	&& echo "Installing Gradle" \
 	&& unzip gradle.zip \
 	&& rm gradle.zip \
 	&& mv "gradle-${GRADLE_VERSION}" "${GRADLE_HOME}/" \
 	&& ln --symbolic "${GRADLE_HOME}/bin/gradle" /usr/bin/gradle \
-	\
 	&& echo "Adding gradle user and group" \
 	&& groupadd --system --gid 1000 gradle \
 	&& useradd --system --gid gradle --uid 1000 --shell /bin/bash --create-home gradle \
@@ -106,10 +115,10 @@ RUN set -o errexit -o nounset \
 # Docker
 # Docker Compose
 #
-ENV DOCKER_VER 17.05.0-ce
-ENV DOCKER_COMPOSE_VER 1.13.0
+ENV DOCKER_VER 17.09.0-ce
+ENV DOCKER_COMPOSE_VER 1.16.1
 
-RUN curl -sL https://get.docker.com/builds/Linux/x86_64/docker-${DOCKER_VER}.tgz | tar -xz -C /tmp && mv /tmp/docker/* /usr/bin && rm -rf /tmp/docker &&\
+RUN curl -sL https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VER}.tgz | tar -xz -C /tmp && mv /tmp/docker/* /usr/bin && rm -rf /tmp/docker &&\
     curl -sL https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VER}/docker-compose-`uname -s`-`uname -m` -o /usr/bin/docker-compose && chmod +x /usr/bin/docker-compose
 
 #
@@ -132,25 +141,12 @@ ENV RUBYGEMS_VERSION 2.6.11
 # some of ruby's build scripts are written in ruby
 #   we purge system ruby later to make sure our final image uses what we just built
 RUN set -ex \
-	\
-	&& buildDeps=' \
-		bison \
-		libgdbm-dev \
-		ruby \
-	' \
-	&& apt-get update \
-	&& apt-get install -y --no-install-recommends $buildDeps \
-	&& rm -rf /var/lib/apt/lists/* \
-	\
 	&& wget -O ruby.tar.xz "https://cache.ruby-lang.org/pub/ruby/${RUBY_MAJOR%-rc}/ruby-$RUBY_VERSION.tar.xz" \
 	&& echo "$RUBY_DOWNLOAD_SHA256 *ruby.tar.xz" | sha256sum -c - \
-	\
 	&& mkdir -p /usr/src/ruby \
 	&& tar -xJf ruby.tar.xz -C /usr/src/ruby --strip-components=1 \
 	&& rm ruby.tar.xz \
-	\
 	&& cd /usr/src/ruby \
-	\
 # hack in "ENABLE_PATH_CHECK" disabling to suppress:
 #   warning: Insecure world writable dir
 	&& { \
@@ -164,11 +160,8 @@ RUN set -ex \
 	&& ./configure --disable-install-doc --enable-shared \
 	&& make -j"$(nproc)" \
 	&& make install \
-	\
-	&& apt-get purge -y --auto-remove $buildDeps \
 	&& cd / \
 	&& rm -r /usr/src/ruby \
-	\
 	&& gem update --system "$RUBYGEMS_VERSION"
 
 ENV BUNDLER_VERSION 1.14.6
@@ -187,10 +180,10 @@ RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 	&& chmod 777 "$GEM_HOME" "$BUNDLE_BIN"
 
 #
-# Python 2.7.13
+# Python 2.7.14
 #
 
-# https://github.com/docker-library/python/blob/05db1fffa8c302b1f94cf39a9d446be285e39668/2.7/Dockerfile
+# https://github.com/docker-library/python/blob/master/2.7/stretch/Dockerfile
 # ensure local python is preferred over distribution python
 ENV PATH /usr/local/bin:$PATH
 
@@ -198,75 +191,60 @@ ENV PATH /usr/local/bin:$PATH
 # > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
 ENV LANG C.UTF-8
 
-# runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-		tcl \
-		tk \
-	&& rm -rf /var/lib/apt/lists/*
-
 ENV GPG_KEY C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF
-ENV PYTHON_VERSION 2.7.13
-
-# if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
-ENV PYTHON_PIP_VERSION 9.0.1
-ENV PYTHON_SETUPTOOLS_VERSION 35.0.1
-ENV PYTHON_WHEEL_VERSION 0.29.0
+ENV PYTHON_VERSION 2.7.14
 
 RUN set -ex \
-	&& buildDeps=' \
-		tcl-dev \
-		tk-dev \
-	' \
-	&& apt-get update && apt-get install -y $buildDeps --no-install-recommends && rm -rf /var/lib/apt/lists/* \
-	\
 	&& wget -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz" \
 	&& wget -O python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc" \
 	&& export GNUPGHOME="$(mktemp -d)" \
-	&& gpg --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-keys "$GPG_KEY" \
+	&& gpg --keyserver hkps://hkps.pool.sks-keyservers.net --recv-keys "$GPG_KEY" \
 	&& gpg --batch --verify python.tar.xz.asc python.tar.xz \
-	&& rm -r "$GNUPGHOME" python.tar.xz.asc \
+	&& rm -rf "$GNUPGHOME" python.tar.xz.asc \
 	&& mkdir -p /usr/src/python \
 	&& tar -xJC /usr/src/python --strip-components=1 -f python.tar.xz \
 	&& rm python.tar.xz \
-	\
 	&& cd /usr/src/python \
+	&& gnuArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
 	&& ./configure \
+		--build="$gnuArch" \
 		--enable-shared \
 		--enable-unicode=ucs4 \
-	&& make -j$(nproc) \
+	&& make -j "$(nproc)" \
 	&& make install \
 	&& ldconfig \
-	\
-		&& wget -O /tmp/get-pip.py 'https://bootstrap.pypa.io/get-pip.py' \
-		&& python2 /tmp/get-pip.py "pip==$PYTHON_PIP_VERSION" \
-		&& rm /tmp/get-pip.py \
-# we use "--force-reinstall" for the case where the version of pip we're trying to install is the same as the version bundled with Python
-# ("Requirement already up-to-date: pip==8.1.2 in /usr/local/lib/python3.6/site-packages")
-# https://github.com/docker-library/python/pull/143#issuecomment-241032683
-	&& pip install --no-cache-dir --upgrade --force-reinstall \
-		"pip==$PYTHON_PIP_VERSION" \
-		"setuptools==$PYTHON_SETUPTOOLS_VERSION" \
-		"wheel==$PYTHON_WHEEL_VERSION" \
-	\
 	&& find /usr/local -depth \
 		\( \
-			\( -type d -a -name test -o -name tests \) \
+			\( -type d -a \( -name test -o -name tests \) \) \
 			-o \
-			\( -type f -a -name '*.pyc' -o -name '*.pyo' \) \
+			\( -type f -a \( -name '*.pyc' -o -name '*.pyo' \) \) \
 		\) -exec rm -rf '{}' + \
-	&& apt-get purge -y --auto-remove $buildDeps \
-	&& rm -rf /usr/src/python ~/.cache
+	&& rm -rf /usr/src/python
+
+# if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
+ENV PYTHON_PIP_VERSION 9.0.1
+
+RUN set -ex; \
+	wget -O get-pip.py 'https://bootstrap.pypa.io/get-pip.py'; \
+	python get-pip.py \
+		--disable-pip-version-check \
+		--no-cache-dir \
+		"pip==$PYTHON_PIP_VERSION" \
+	; \
+	pip --version; \
+	find /usr/local -depth \
+		\( \
+			\( -type d -a \( -name test -o -name tests \) \) \
+			-o \
+			\( -type f -a \( -name '*.pyc' -o -name '*.pyo' \) \) \
+		\) -exec rm -rf '{}' +; \
+	rm -f get-pip.py
 
 # install "virtualenv", since the vast majority of users of this image will want it
 RUN pip install --no-cache-dir virtualenv
 
-# Additional packages here so we can copy and paste updates to the above recipes
-RUN apt-get update && apt-get install -y --no-install-recommends \
-		jq netcat-openbsd \
-	&& rm -rf /var/lib/apt/lists/*
-
 # These options tell Java to limit heap based on cgroup limits, so we can use Docker to limit memory instead of -Xmx like options
-ENV JAVA_OPTS "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+ENV _JAVA_OPTIONS "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
 
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

@@ -2,10 +2,10 @@
 
 . ./hooks/env
 
-docker run $IMAGE_NAME docker version | grep '17\.05\.0-ce'
-docker run $IMAGE_NAME docker-compose version | grep '1\.13\.0'
-docker run $IMAGE_NAME gradle --version | grep '3\.5'
+docker run $IMAGE_NAME docker version | grep '17\.09\.0-ce'
+docker run $IMAGE_NAME docker-compose version | grep '1\.16\.1'
+docker run $IMAGE_NAME gradle --version | grep '3\.5\.1'
 docker run $IMAGE_NAME ruby --version | grep '2\.4\.1'
-docker run $IMAGE_NAME python --version 2>&1 | grep '2\.7\.13'
+docker run $IMAGE_NAME python --version 2>&1 | grep '2\.7\.14'
 docker run $IMAGE_NAME java -version
 
