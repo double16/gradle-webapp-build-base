@@ -1,5 +1,4 @@
 FROM buildpack-deps:stretch-scm
-MAINTAINER "Patrick Double <pat@patdouble.com>"
 
 USER root
 
@@ -155,7 +154,6 @@ RUN set -ex \
 		cat file.c; \
 	} > file.c.new \
 	&& mv file.c.new file.c \
-	\
 	&& autoconf \
 	&& ./configure --disable-install-doc --enable-shared \
 	&& make -j"$(nproc)" \
@@ -250,7 +248,8 @@ COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gradle"]
 
-LABEL org.label-schema.build-date=$BUILD_DATE \
+LABEL maintainer="Patrick Double <pat@patdouble.com>" \
+      org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.docker.dockerfile="$DOCKERFILE_PATH/Dockerfile" \
       org.label-schema.license="GPLv2" \
       org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \

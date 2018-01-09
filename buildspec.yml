@@ -15,10 +15,9 @@ phases:
       - echo Building the Docker image...          
       - ./hooks/build
       - ./hooks/test
-      - source ./hooks/env
-      - docker tag $IMAGE_NAME:$SOURCE_BRANCH $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_NAME:$SOURCE_BRANCH      
+      - . ./hooks/env && docker tag $IMAGE_NAME:$SOURCE_BRANCH $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_NAME:$SOURCE_BRANCH      
   post_build:
     commands:
       - echo Build completed on `date`
       - echo Pushing the Docker image...
-      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_NAME:$SOURCE_BRANCH
+      - . ./hooks/env && docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_NAME:$SOURCE_BRANCH
