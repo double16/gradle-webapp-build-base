@@ -4,9 +4,9 @@ phases:
   pre_build:
     commands:
       - echo Validating environment...
-      - [ -n "${AWS_DEFAULT_REGION}" ] || ( echo "Missing AWS_DEFAULT_REGION" ; exit 1)
-      - [ -n "${AWS_ACCOUNT_ID}" ]     || ( echo "Missing AWS_ACCOUNT_ID" ; exit 1)
-      - [ -n "${IMAGE_NAME}" ]         || ( echo "Missing IMAGE_NAME" ; exit 1)
+      - '[ -n "${AWS_DEFAULT_REGION}" ] || ( echo "Missing AWS_DEFAULT_REGION" ; exit 1)'
+      - '[ -n "${AWS_ACCOUNT_ID}" ]     || ( echo "Missing AWS_ACCOUNT_ID" ; exit 1)'
+      - '[ -n "${IMAGE_NAME}" ]         || ( echo "Missing IMAGE_NAME" ; exit 1)'
       - echo Logging in to Amazon ECR...
       - $(aws ecr get-login --no-include-email --region $AWS_DEFAULT_REGION)
   build:
