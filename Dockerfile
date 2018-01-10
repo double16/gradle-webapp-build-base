@@ -5,25 +5,41 @@ USER root
 # Collect all of the packages needed for our composite of tools into one place
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-		bzip2 \
-		unzip \
-		xz-utils \
-		bison \
-		libgdbm-dev \
-		ruby \
-		autoconf \
-		gcc \
-		make \
-		zlib1g-dev \
-		libssl-dev \
-		tcl \
-		tk \
-		dpkg-dev \
-		tcl-dev \
-		tk-dev \
-		libssl-dev \
-                jq \
-                netcat-openbsd
+	apt-transport-https \
+	ca-certificates \
+	curl \
+	gnupg2 \
+	software-properties-common \
+	bzip2 \
+	unzip \
+	xz-utils \
+	bison \
+	libgdbm-dev \
+	ruby \
+	autoconf \
+	gcc \
+	make \
+	zlib1g-dev \
+	libssl-dev \
+	tcl \
+	tk \
+	dpkg-dev \
+	tcl-dev \
+	tk-dev \
+	libssl-dev \
+	jq \
+	netcat-openbsd
+
+#
+# Docker in Docker (dind)
+# # https://docs.docker.com/engine/installation/linux/docker-ce/debian/#set-up-the-repository
+RUN curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg | apt-key add - &&\
+	add-apt-repository \
+	"deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") \
+	$(lsb_release -cs) \
+	stable" &&\
+	apt-get update &&\
+	apt-get install -y docker-ce
 
 #
 # OpenJDK 8
