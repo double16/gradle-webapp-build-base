@@ -31,17 +31,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	netcat-openbsd
 
 #
-# Docker in Docker (dind)
-# # https://docs.docker.com/engine/installation/linux/docker-ce/debian/#set-up-the-repository
-RUN curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg | apt-key add - &&\
-	add-apt-repository \
-	"deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") \
-	$(lsb_release -cs) \
-	stable" &&\
-	apt-get update &&\
-	apt-get install -y docker-ce
-
-#
 # OpenJDK 8
 #
 # https://github.com/docker-library/openjdk/blob/master/8-jdk/Dockerfile
@@ -69,12 +58,13 @@ RUN { \
 RUN ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home
 ENV JAVA_HOME /docker-java-home
 
-ENV JAVA_VERSION 8u151
-ENV JAVA_DEBIAN_VERSION 8u151-b12-1~deb9u1
-
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
-ENV CA_CERTIFICATES_JAVA_VERSION 20170531+nmu1
+ENV JAVA_VERSION="8u151" \
+    JAVA_DEBIAN_VERSION="8u151-b12-1~deb9u1" \
+    CA_CERTIFICATES_JAVA_VERSION="20170531+nmu1" \
+    _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+
 
 RUN set -ex; \
 	apt-get update; \
@@ -98,8 +88,7 @@ RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 #
 # https://github.com/keeganwitt/docker-gradle/blob/fac6450faeec2232e1ed15051a751236e40ffda2/jdk8/Dockerfile
 
-ENV GRADLE_HOME /opt/gradle
-ENV GRADLE_VERSION 3.5.1
+ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="3.5.1"
 
 ARG GRADLE_DOWNLOAD_SHA256=8dce35f52d4c7b4a4946df73aa2830e76ba7148850753d8b5e94c5dc325ceef8
 RUN set -o errexit -o nounset \
@@ -127,16 +116,6 @@ RUN set -o errexit -o nounset \
 	&& gradle --version
 
 #
-# Docker
-# Docker Compose
-#
-ENV DOCKER_VER 17.09.0-ce
-ENV DOCKER_COMPOSE_VER 1.16.1
-
-RUN curl -sL https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_VER}.tgz | tar -xz -C /tmp && mv /tmp/docker/* /usr/bin && rm -rf /tmp/docker &&\
-    curl -sL https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VER}/docker-compose-`uname -s`-`uname -m` -o /usr/bin/docker-compose && chmod +x /usr/bin/docker-compose
-
-#
 # Ruby 2.4.1
 #
 
@@ -148,10 +127,11 @@ RUN mkdir -p /usr/local/etc \
 		echo 'update: --no-document'; \
 	} >> /usr/local/etc/gemrc
 
-ENV RUBY_MAJOR 2.4
-ENV RUBY_VERSION 2.4.1
-ENV RUBY_DOWNLOAD_SHA256 4fc8a9992de3e90191de369270ea4b6c1b171b7941743614cc50822ddc1fe654
-ENV RUBYGEMS_VERSION 2.6.11
+ENV RUBY_MAJOR="2.4" \
+    RUBY_VERSION="2.4.1" \
+    RUBY_DOWNLOAD_SHA256="4fc8a9992de3e90191de369270ea4b6c1b171b7941743614cc50822ddc1fe654" \
+    RUBYGEMS_VERSION="2.6.11" \
+    BUNDLER_VERSION="1.14.6"
 
 # some of ruby's build scripts are written in ruby
 #   we purge system ruby later to make sure our final image uses what we just built
@@ -178,7 +158,6 @@ RUN set -ex \
 	&& rm -r /usr/src/ruby \
 	&& gem update --system "$RUBYGEMS_VERSION"
 
-ENV BUNDLER_VERSION 1.14.6
 
 RUN gem install bundler --version "$BUNDLER_VERSION"
 
@@ -188,8 +167,8 @@ ENV GEM_HOME /usr/local/bundle
 ENV BUNDLE_PATH="$GEM_HOME" \
 	BUNDLE_BIN="$GEM_HOME/bin" \
 	BUNDLE_SILENCE_ROOT_WARNING=1 \
-	BUNDLE_APP_CONFIG="$GEM_HOME"
-ENV PATH $BUNDLE_BIN:$PATH
+	BUNDLE_APP_CONFIG="$GEM_HOME" \
+    PATH="$BUNDLE_BIN:$PATH"
 RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 	&& chmod 777 "$GEM_HOME" "$BUNDLE_BIN"
 
@@ -199,14 +178,12 @@ RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 
 # https://github.com/docker-library/python/blob/master/2.7/stretch/Dockerfile
 # ensure local python is preferred over distribution python
-ENV PATH /usr/local/bin:$PATH
-
 # http://bugs.python.org/issue19846
 # > At the moment, setting "LANG=C" on a Linux system *fundamentally breaks Python 3*, and that's not OK.
-ENV LANG C.UTF-8
-
-ENV GPG_KEY C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF
-ENV PYTHON_VERSION 2.7.14
+ENV PATH="/usr/local/bin:$PATH" \
+    LANG="C.UTF-8" \
+    GPG_KEY="C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF" \
+    PYTHON_VERSION="2.7.14"
 
 RUN set -ex \
 	&& wget -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz" \
@@ -257,8 +234,44 @@ RUN set -ex; \
 # install "virtualenv", since the vast majority of users of this image will want it
 RUN pip install --no-cache-dir virtualenv
 
-# These options tell Java to limit heap based on cgroup limits, so we can use Docker to limit memory instead of -Xmx like options
-ENV _JAVA_OPTIONS "-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
+#
+# Docker in Docker (dind)
+# https://github.com/aws/aws-codebuild-docker-images/blob/master/ubuntu/docker/17.09.0/Dockerfile
+#
+ENV DOCKER_BUCKET="download.docker.com" \
+	DOCKER_VERSION="17.12.0-ce" \
+	DOCKER_CHANNEL="stable" \
+	DOCKER_SHA256="692e1c72937f6214b1038def84463018d8e320c8eaf8530546c84c2f8f9c767d" \
+	DIND_COMMIT="3b5fac462d21ca164b3778647420016315289034" \
+	DOCKER_COMPOSE_VERSION="1.16.1"
+
+# From the docker:17.09
+RUN set -x \
+	&& curl -fSL "https://${DOCKER_BUCKET}/linux/static/${DOCKER_CHANNEL}/x86_64/docker-${DOCKER_VERSION}.tgz" -o docker.tgz \
+	&& echo "${DOCKER_SHA256} *docker.tgz" | sha256sum -c - \
+	&& tar --extract --file docker.tgz --strip-components 1  --directory /usr/local/bin/ \
+	&& rm docker.tgz \
+	&& docker -v \
+	# From the docker dind 17.09
+	&& apt-get update && apt-get install -y --no-install-recommends \
+	e2fsprogs iptables xfsprogs xz-utils kmod \
+	&& addgroup docker \
+	&& usermod -G docker gradle \
+	# set up subuid/subgid so that "--userns-remap=default" works out-of-the-box
+	&& addgroup dockremap \
+	&& useradd -g dockremap dockremap \
+	&& echo 'dockremap:165536:65536' >> /etc/subuid \
+	&& echo 'dockremap:165536:65536' >> /etc/subgid \
+	&& wget "https://raw.githubusercontent.com/docker/docker/${DIND_COMMIT}/hack/dind" -O /usr/local/bin/dind \
+	&& curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-Linux-x86_64 > /usr/local/bin/docker-compose \
+	&& chmod +x /usr/local/bin/dind /usr/local/bin/docker-compose \
+	# Ensure docker-compose works
+	&& docker-compose version \
+	&& rm -rf /var/lib/apt/lists/* \
+	&& apt-get clean
+
+COPY modprobe.sh /usr/local/bin/modprobe
+VOLUME /var/lib/docker
 
 COPY entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
@@ -268,10 +281,8 @@ LABEL maintainer="Patrick Double <pat@patdouble.com>" \
       org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.docker.dockerfile="$DOCKERFILE_PATH/Dockerfile" \
       org.label-schema.license="GPLv2" \
-      org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
+      org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker (dind) ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
       org.label-schema.url="https://bitbucket.org/double16/gradle-webapp-build-base" \
       org.label-schema.vcs-ref=$SOURCE_COMMIT \
       org.label-schema.vcs-type="$SOURCE_TYPE" \
       org.label-schema.vcs-url="https://bitbucket.org/double16/gradle-webapp-build-base.git"
-
-
