@@ -28,7 +28,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	tk-dev \
 	libssl-dev \
 	jq \
-	netcat-openbsd
+	netcat-openbsd \
+	collectl
 
 #
 # OpenJDK 8
@@ -243,7 +244,7 @@ ENV DOCKER_BUCKET="download.docker.com" \
 	DOCKER_CHANNEL="stable" \
 	DOCKER_SHA256="692e1c72937f6214b1038def84463018d8e320c8eaf8530546c84c2f8f9c767d" \
 	DIND_COMMIT="3b5fac462d21ca164b3778647420016315289034" \
-	DOCKER_COMPOSE_VERSION="1.16.1"
+	DOCKER_COMPOSE_VERSION="1.18.0"
 
 # From the docker:17.09
 RUN set -x \
