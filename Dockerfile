@@ -17,6 +17,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	libgdbm-dev \
 	ruby \
 	autoconf \
+	automake \
+	libtool \
+	build-essential \
 	gcc \
 	make \
 	zlib1g-dev \
