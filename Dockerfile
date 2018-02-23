@@ -32,7 +32,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	libssl-dev \
 	jq \
 	netcat-openbsd \
-	collectl
+	collectl \
+	# Google Chrome deps
+	xvfb fontconfig libxss1 libappindicator1 libindicator7 libpango1.0-0 fonts-liberation xdg-utils gconf-service libasound2 libatk-bridge2.0-0 libgtk-3-0 libnspr4 libnss3 lsb-release
 
 #
 # OpenJDK 8
@@ -88,8 +90,7 @@ RUN set -ex; \
 RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
 #
-# Gradle 3.5.1
-#
+# Gradle
 # https://github.com/keeganwitt/docker-gradle/blob/fac6450faeec2232e1ed15051a751236e40ffda2/jdk8/Dockerfile
 
 ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="3.5.1"
@@ -273,6 +274,12 @@ RUN set -x \
 	&& docker-compose version \
 	&& rm -rf /var/lib/apt/lists/* \
 	&& apt-get clean
+
+# Google Chrome for headless testing
+RUN export CHROME_VERSION=stable_current &&\
+	curl --silent --show-error --location --fail --retry 3 -o /tmp/google-chrome-${CHROME_VERSION}_amd64.deb https://dl.google.com/linux/direct/google-chrome-${CHROME_VERSION}_amd64.deb &&\
+    dpkg -i /tmp/google-chrome-${CHROME_VERSION}_amd64.deb &&\
+	rm /tmp/google-chrome-${CHROME_VERSION}_amd64.deb
 
 COPY modprobe.sh /usr/local/bin/modprobe
 VOLUME /var/lib/docker
