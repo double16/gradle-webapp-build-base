@@ -93,9 +93,9 @@ RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 # Gradle
 # https://github.com/keeganwitt/docker-gradle/blob/fac6450faeec2232e1ed15051a751236e40ffda2/jdk8/Dockerfile
 
-ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="3.5.1"
+ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.5.1"
 
-ARG GRADLE_DOWNLOAD_SHA256=8dce35f52d4c7b4a4946df73aa2830e76ba7148850753d8b5e94c5dc325ceef8
+ARG GRADLE_DOWNLOAD_SHA256=3e2ea0d8b96605b7c528768f646e0975bd9822f06df1f04a64fd279b1a17805e
 RUN set -o errexit -o nounset \
 	&& echo "Downloading Gradle" \
 	&& wget --no-verbose --output-document=gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
