@@ -4,7 +4,8 @@ USER root
 
 # Collect all of the packages needed for our composite of tools into one place
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN export DEBIAN_FRONTEND=noninteractive &&\
+    apt-get update && apt-get install -yq --no-install-recommends \
 	apt-transport-https \
 	ca-certificates \
 	curl \
@@ -32,7 +33,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	libssl-dev \
 	jq \
 	netcat-openbsd \
-	collectl \
+	collectl colplot \
 	# Google Chrome deps
 	xvfb fontconfig libxss1 libappindicator1 libindicator7 libpango1.0-0 fonts-liberation xdg-utils gconf-service libasound2 libatk-bridge2.0-0 libgtk-3-0 libnspr4 libnss3 lsb-release
 
