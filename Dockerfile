@@ -1,5 +1,10 @@
 FROM buildpack-deps:stretch-scm
 
+ARG BUILD_DATE
+ARG DOCKERFILE_PATH
+ARG SOURCE_COMMIT
+ARG SOURCE_TYPE
+
 USER root
 
 # Collect all of the packages needed for our composite of tools into one place
@@ -35,7 +40,7 @@ RUN export DEBIAN_FRONTEND=noninteractive &&\
 	netcat-openbsd \
 	collectl colplot \
 	# Google Chrome deps
-	xvfb fontconfig libxss1 libappindicator1 libindicator7 libpango1.0-0 fonts-liberation xdg-utils gconf-service libasound2 libatk-bridge2.0-0 libgtk-3-0 libnspr4 libnss3 lsb-release
+	xvfb fontconfig libxss1 libappindicator3-1 libindicator7 libpango1.0-0 fonts-liberation xdg-utils gconf-service libasound2 libatk-bridge2.0-0 libgtk-3-0 libnspr4 libnss3 lsb-release
 
 #
 # OpenJDK 8
@@ -67,14 +72,13 @@ ENV JAVA_HOME /docker-java-home
 
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
-ENV JAVA_VERSION="8u151" \
-    JAVA_DEBIAN_VERSION="8u151-b12-1~deb9u1" \
-    CA_CERTIFICATES_JAVA_VERSION="20170531+nmu1" \
+ENV JAVA_VERSION="8u162" \
+	JAVA_DEBIAN_VERSION="8u162-b12-1~deb9u1" \
+	CA_CERTIFICATES_JAVA_VERSION="20170531+nmu1" \
     _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
 
 
 RUN set -ex; \
-	apt-get update; \
 	apt-get install -y \
 		openjdk-8-jdk="$JAVA_DEBIAN_VERSION" \
 		ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" \
@@ -94,9 +98,9 @@ RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 # Gradle
 # https://github.com/keeganwitt/docker-gradle/blob/fac6450faeec2232e1ed15051a751236e40ffda2/jdk8/Dockerfile
 
-ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.5.1"
+ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.6"
 
-ARG GRADLE_DOWNLOAD_SHA256=3e2ea0d8b96605b7c528768f646e0975bd9822f06df1f04a64fd279b1a17805e
+ARG GRADLE_DOWNLOAD_SHA256=98bd5fd2b30e070517e03c51cbb32beee3e2ee1a84003a5a5d748996d4b1b915
 RUN set -o errexit -o nounset \
 	&& echo "Downloading Gradle" \
 	&& wget --no-verbose --output-document=gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
@@ -219,7 +223,7 @@ RUN set -ex \
 	&& rm -rf /usr/src/python
 
 # if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
-ENV PYTHON_PIP_VERSION 9.0.1
+ENV PYTHON_PIP_VERSION 10.0.0
 
 RUN set -ex; \
 	wget -O get-pip.py 'https://bootstrap.pypa.io/get-pip.py'; \
@@ -245,11 +249,11 @@ RUN pip install --no-cache-dir virtualenv
 # https://github.com/aws/aws-codebuild-docker-images/blob/master/ubuntu/docker/17.09.0/Dockerfile
 #
 ENV DOCKER_BUCKET="download.docker.com" \
-	DOCKER_VERSION="17.12.0-ce" \
+	DOCKER_VERSION="18.03.0-ce" \
 	DOCKER_CHANNEL="stable" \
-	DOCKER_SHA256="692e1c72937f6214b1038def84463018d8e320c8eaf8530546c84c2f8f9c767d" \
-	DIND_COMMIT="3b5fac462d21ca164b3778647420016315289034" \
-	DOCKER_COMPOSE_VERSION="1.18.0"
+	DOCKER_SHA256="e5dff6245172081dbf14285dafe4dede761f8bc1750310156b89928dbf56a9ee" \
+	DIND_COMMIT="52379fa76dee07ca038624d639d9e14f4fb719ff" \
+	DOCKER_COMPOSE_VERSION="1.20.1"
 
 # From the docker:17.09
 RUN set -x \
@@ -259,7 +263,7 @@ RUN set -x \
 	&& rm docker.tgz \
 	&& docker -v \
 	# From the docker dind 17.09
-	&& apt-get update && apt-get install -y --no-install-recommends \
+	&& apt-get install -y --no-install-recommends \
 	e2fsprogs iptables xfsprogs xz-utils kmod \
 	&& addgroup docker \
 	&& usermod -G docker gradle \
@@ -268,7 +272,7 @@ RUN set -x \
 	&& useradd -g dockremap dockremap \
 	&& echo 'dockremap:165536:65536' >> /etc/subuid \
 	&& echo 'dockremap:165536:65536' >> /etc/subgid \
-	&& wget "https://raw.githubusercontent.com/docker/docker/${DIND_COMMIT}/hack/dind" -O /usr/local/bin/dind \
+	&& wget "https://raw.githubusercontent.com/moby/moby/${DIND_COMMIT}/hack/dind" -O /usr/local/bin/dind \
 	&& curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-Linux-x86_64 > /usr/local/bin/docker-compose \
 	&& chmod +x /usr/local/bin/dind /usr/local/bin/docker-compose \
 	# Ensure docker-compose works
@@ -278,9 +282,20 @@ RUN set -x \
 
 # Google Chrome for headless testing
 RUN export CHROME_VERSION=stable_current &&\
-	curl --silent --show-error --location --fail --retry 3 -o /tmp/google-chrome-${CHROME_VERSION}_amd64.deb https://dl.google.com/linux/direct/google-chrome-${CHROME_VERSION}_amd64.deb &&\
+	curl --show-error --location --fail --retry 3 -o /tmp/google-chrome-${CHROME_VERSION}_amd64.deb https://dl.google.com/linux/direct/google-chrome-${CHROME_VERSION}_amd64.deb &&\
     dpkg -i /tmp/google-chrome-${CHROME_VERSION}_amd64.deb &&\
 	rm /tmp/google-chrome-${CHROME_VERSION}_amd64.deb
+
+# Terraform
+ENV TERRAFORM_VERSION="0.11.7" \
+	TERRAFORM_SHA256="6b8ce67647a59b2a3f70199c304abca0ddec0e49fd060944c26f666298e23418"
+
+RUN curl -fL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip &&\
+	echo "${TERRAFORM_SHA256} /tmp/terraform.zip" | sha256sum --check - &&\
+    cd /usr/bin &&\
+	unzip /tmp/terraform.zip &&\
+	rm /tmp/terraform.zip &&\
+	chmod +x /usr/bin/terraform
 
 COPY modprobe.sh /usr/local/bin/modprobe
 VOLUME /var/lib/docker
@@ -293,7 +308,7 @@ LABEL maintainer="Patrick Double <pat@patdouble.com>" \
       org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.docker.dockerfile="$DOCKERFILE_PATH/Dockerfile" \
       org.label-schema.license="GPLv2" \
-      org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker (dind) ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
+      org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker (dind) ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION}, Terraform ${TERRAFORM_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
       org.label-schema.url="https://bitbucket.org/double16/gradle-webapp-build-base" \
       org.label-schema.vcs-ref=$SOURCE_COMMIT \
       org.label-schema.vcs-type="$SOURCE_TYPE" \
