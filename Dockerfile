@@ -223,7 +223,7 @@ RUN set -ex \
 	&& rm -rf /usr/src/python
 
 # if this is called "PIP_VERSION", pip explodes with "ValueError: invalid truth value '<VERSION>'"
-ENV PYTHON_PIP_VERSION 10.0.0
+ENV PYTHON_PIP_VERSION 10.0.1
 
 RUN set -ex; \
 	wget -O get-pip.py 'https://bootstrap.pypa.io/get-pip.py'; \
@@ -242,7 +242,7 @@ RUN set -ex; \
 	rm -f get-pip.py
 
 # install "virtualenv", since the vast majority of users of this image will want it
-RUN pip install --no-cache-dir virtualenv
+RUN pip install --no-cache-dir virtualenv awscli azure-cli
 
 #
 # Docker in Docker (dind)
