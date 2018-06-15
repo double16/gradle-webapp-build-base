@@ -1,6 +1,5 @@
 FROM buildpack-deps:stretch-scm
 
-ARG BUILD_DATE
 ARG DOCKERFILE_PATH
 ARG SOURCE_COMMIT
 ARG SOURCE_TYPE
@@ -45,7 +44,7 @@ RUN export DEBIAN_FRONTEND=noninteractive &&\
 #
 # OpenJDK 8
 #
-# https://github.com/docker-library/openjdk/blob/master/8-jdk/Dockerfile
+# https://github.com/docker-library/openjdk/blob/master/8/jdk/Dockerfile
 
 # A few problems with compiling Java from source:
 #  1. Oracle.  Licensing prevents us from redistributing the official JDK.
@@ -72,8 +71,8 @@ ENV JAVA_HOME /docker-java-home
 
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
-ENV JAVA_VERSION="8u162" \
-	JAVA_DEBIAN_VERSION="8u162-b12-1~deb9u1" \
+ENV JAVA_VERSION="8u171" \
+	JAVA_DEBIAN_VERSION="8u171-b11-1~deb9u1" \
 	CA_CERTIFICATES_JAVA_VERSION="20170531+nmu1" \
     _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
 
@@ -98,9 +97,9 @@ RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 # Gradle
 # https://github.com/keeganwitt/docker-gradle/blob/fac6450faeec2232e1ed15051a751236e40ffda2/jdk8/Dockerfile
 
-ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.6"
+ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.8"
 
-ARG GRADLE_DOWNLOAD_SHA256=98bd5fd2b30e070517e03c51cbb32beee3e2ee1a84003a5a5d748996d4b1b915
+ARG GRADLE_DOWNLOAD_SHA256=f3e29692a8faa94eb0b02ebf36fa263a642b3ae8694ef806c45c345b8683f1ba
 RUN set -o errexit -o nounset \
 	&& echo "Downloading Gradle" \
 	&& wget --no-verbose --output-document=gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
@@ -126,7 +125,7 @@ RUN set -o errexit -o nounset \
 	&& gradle --version
 
 #
-# Ruby 2.4.1
+# Ruby 2.4.4
 #
 
 # from https://github.com/docker-library/ruby/blob/e98bec810e6f1bd88ad0106f2e3b3f3291f5f5bb/2.4/Dockerfile
@@ -138,10 +137,10 @@ RUN mkdir -p /usr/local/etc \
 	} >> /usr/local/etc/gemrc
 
 ENV RUBY_MAJOR="2.4" \
-    RUBY_VERSION="2.4.1" \
-    RUBY_DOWNLOAD_SHA256="4fc8a9992de3e90191de369270ea4b6c1b171b7941743614cc50822ddc1fe654" \
-    RUBYGEMS_VERSION="2.6.11" \
-    BUNDLER_VERSION="1.14.6"
+    RUBY_VERSION="2.4.4" \
+	RUBY_DOWNLOAD_SHA256="1d0034071d675193ca769f64c91827e5f54cb3a7962316a41d5217c7bc6949f0" \
+    RUBYGEMS_VERSION="2.6.14.1" \
+    BUNDLER_VERSION="1.16.2"
 
 # some of ruby's build scripts are written in ruby
 #   we purge system ruby later to make sure our final image uses what we just built
@@ -199,7 +198,7 @@ RUN set -ex \
 	&& wget -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz" \
 	&& wget -O python.tar.xz.asc "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz.asc" \
 	&& export GNUPGHOME="$(mktemp -d)" \
-	&& gpg --keyserver hkps://hkps.pool.sks-keyservers.net --recv-keys "$GPG_KEY" \
+	&& gpg --keyserver keyserver.ubuntu.com --recv-keys "$GPG_KEY" \
 	&& gpg --batch --verify python.tar.xz.asc python.tar.xz \
 	&& rm -rf "$GNUPGHOME" python.tar.xz.asc \
 	&& mkdir -p /usr/src/python \
@@ -249,11 +248,11 @@ RUN pip install --no-cache-dir virtualenv awscli azure-cli
 # https://github.com/aws/aws-codebuild-docker-images/blob/master/ubuntu/docker/17.09.0/Dockerfile
 #
 ENV DOCKER_BUCKET="download.docker.com" \
-	DOCKER_VERSION="18.03.0-ce" \
+	DOCKER_VERSION="18.03.1-ce" \
 	DOCKER_CHANNEL="stable" \
-	DOCKER_SHA256="e5dff6245172081dbf14285dafe4dede761f8bc1750310156b89928dbf56a9ee" \
+	DOCKER_SHA256="0e245c42de8a21799ab11179a4fce43b494ce173a8a2d6567ea6825d6c5265aa" \
 	DIND_COMMIT="52379fa76dee07ca038624d639d9e14f4fb719ff" \
-	DOCKER_COMPOSE_VERSION="1.20.1"
+	DOCKER_COMPOSE_VERSION="1.21.1"
 
 # From the docker:17.09
 RUN set -x \
@@ -273,7 +272,7 @@ RUN set -x \
 	&& echo 'dockremap:165536:65536' >> /etc/subuid \
 	&& echo 'dockremap:165536:65536' >> /etc/subgid \
 	&& wget "https://raw.githubusercontent.com/moby/moby/${DIND_COMMIT}/hack/dind" -O /usr/local/bin/dind \
-	&& curl -L https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-Linux-x86_64 > /usr/local/bin/docker-compose \
+	&& curl -fkSL https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-Linux-x86_64 > /usr/local/bin/docker-compose \
 	&& chmod +x /usr/local/bin/dind /usr/local/bin/docker-compose \
 	# Ensure docker-compose works
 	&& docker-compose version \
@@ -297,15 +296,13 @@ RUN curl -fL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${TE
 	rm /tmp/terraform.zip &&\
 	chmod +x /usr/bin/terraform
 
-COPY modprobe.sh /usr/local/bin/modprobe
+COPY *.sh /usr/local/bin/
 VOLUME /var/lib/docker
 
-COPY entrypoint.sh /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["gradle"]
 
 LABEL maintainer="Patrick Double <pat@patdouble.com>" \
-      org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.docker.dockerfile="$DOCKERFILE_PATH/Dockerfile" \
       org.label-schema.license="GPLv2" \
       org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker (dind) ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION}, Terraform ${TERRAFORM_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
