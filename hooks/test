@@ -2,10 +2,15 @@
 
 . ./hooks/env
 
-docker run -e DOCKER_HOST='' $IMAGE_NAME docker version | grep -F '18.03.1-ce'
-docker run $IMAGE_NAME docker-compose version | grep -F '1.21.1'
-docker run $IMAGE_NAME gradle --version | grep -F '4.8'
+function finish {
+  [ $? = 0 ] && echo "PASS" || echo "FAIL"
+}
+trap finish EXIT TERM
+
+docker run -e DOCKER_HOST='' $IMAGE_NAME docker version | grep -F '18.06.1-ce'
+docker run $IMAGE_NAME docker-compose version | grep -F '1.22.0'
+docker run $IMAGE_NAME gradle --version | grep -F '4.10.2'
 docker run $IMAGE_NAME ruby --version | grep -F '2.4.4'
-docker run $IMAGE_NAME python --version 2>&1 | grep -F '2.7.14'
-docker run $IMAGE_NAME terraform --version | grep -F '0.11.7'
+docker run $IMAGE_NAME python --version 2>&1 | grep -F '2.7.15'
+docker run $IMAGE_NAME terraform --version | grep -F '0.11.8'
 docker run $IMAGE_NAME java -version 2>&1 | grep -F '1.8.0'

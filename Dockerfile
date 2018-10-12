@@ -71,8 +71,8 @@ ENV JAVA_HOME /docker-java-home
 
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
-ENV JAVA_VERSION="8u171" \
-	JAVA_DEBIAN_VERSION="8u171-b11-1~deb9u1" \
+ENV JAVA_VERSION="8u181" \
+	JAVA_DEBIAN_VERSION="8u181-b13-1~deb9u1" \
 	CA_CERTIFICATES_JAVA_VERSION="20170531+nmu1" \
     _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
 
@@ -97,9 +97,9 @@ RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 # Gradle
 # https://github.com/keeganwitt/docker-gradle/blob/fac6450faeec2232e1ed15051a751236e40ffda2/jdk8/Dockerfile
 
-ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.8"
+ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.10.2"
 
-ARG GRADLE_DOWNLOAD_SHA256=f3e29692a8faa94eb0b02ebf36fa263a642b3ae8694ef806c45c345b8683f1ba
+ARG GRADLE_DOWNLOAD_SHA256=b49c6da1b2cb67a0caf6c7480630b51c70a11ca2016ff2f555eaeda863143a29
 RUN set -o errexit -o nounset \
 	&& echo "Downloading Gradle" \
 	&& wget --no-verbose --output-document=gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
@@ -192,7 +192,7 @@ RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 ENV PATH="/usr/local/bin:$PATH" \
     LANG="C.UTF-8" \
     GPG_KEY="C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF" \
-    PYTHON_VERSION="2.7.14"
+    PYTHON_VERSION="2.7.15"
 
 RUN set -ex \
 	&& wget -O python.tar.xz "https://www.python.org/ftp/python/${PYTHON_VERSION%%[a-z]*}/Python-$PYTHON_VERSION.tar.xz" \
@@ -248,11 +248,11 @@ RUN pip install --no-cache-dir virtualenv awscli azure-cli
 # https://github.com/aws/aws-codebuild-docker-images/blob/master/ubuntu/docker/17.09.0/Dockerfile
 #
 ENV DOCKER_BUCKET="download.docker.com" \
-	DOCKER_VERSION="18.03.1-ce" \
+	DOCKER_VERSION="18.06.1-ce" \
 	DOCKER_CHANNEL="stable" \
-	DOCKER_SHA256="0e245c42de8a21799ab11179a4fce43b494ce173a8a2d6567ea6825d6c5265aa" \
+	DOCKER_SHA256="83be159cf0657df9e1a1a4a127d181725a982714a983b2bdcc0621244df93687" \
 	DIND_COMMIT="52379fa76dee07ca038624d639d9e14f4fb719ff" \
-	DOCKER_COMPOSE_VERSION="1.21.1"
+	DOCKER_COMPOSE_VERSION="1.22.0"
 
 # From the docker:17.09
 RUN set -x \
@@ -286,8 +286,8 @@ RUN export CHROME_VERSION=stable_current &&\
 	rm /tmp/google-chrome-${CHROME_VERSION}_amd64.deb
 
 # Terraform
-ENV TERRAFORM_VERSION="0.11.7" \
-	TERRAFORM_SHA256="6b8ce67647a59b2a3f70199c304abca0ddec0e49fd060944c26f666298e23418"
+ENV TERRAFORM_VERSION="0.11.8" \
+	TERRAFORM_SHA256="84ccfb8e13b5fce63051294f787885b76a1fedef6bdbecf51c5e586c9e20c9b7"
 
 RUN curl -fL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip &&\
 	echo "${TERRAFORM_SHA256} /tmp/terraform.zip" | sha256sum --check - &&\
