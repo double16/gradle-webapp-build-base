@@ -72,7 +72,7 @@ ENV JAVA_HOME /docker-java-home
 # see https://bugs.debian.org/775775
 # and https://github.com/docker-library/java/issues/19#issuecomment-70546872
 ENV JAVA_VERSION="8u181" \
-	JAVA_DEBIAN_VERSION="8u181-b13-1~deb9u1" \
+	JAVA_DEBIAN_VERSION="8u181-b13-2~deb9u1" \
 	CA_CERTIFICATES_JAVA_VERSION="20170531+nmu1" \
     _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
 
