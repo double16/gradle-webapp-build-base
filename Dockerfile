@@ -97,9 +97,9 @@ RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
 # Gradle
 # https://github.com/keeganwitt/docker-gradle/blob/fac6450faeec2232e1ed15051a751236e40ffda2/jdk8/Dockerfile
 
-ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.10.2"
+ENV GRADLE_HOME="/opt/gradle" GRADLE_VERSION="4.10.3"
 
-ARG GRADLE_DOWNLOAD_SHA256=b49c6da1b2cb67a0caf6c7480630b51c70a11ca2016ff2f555eaeda863143a29
+ARG GRADLE_DOWNLOAD_SHA256=8626cbf206b4e201ade7b87779090690447054bc93f052954c78480fa6ed186e
 RUN set -o errexit -o nounset \
 	&& echo "Downloading Gradle" \
 	&& wget --no-verbose --output-document=gradle.zip "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" \
@@ -182,7 +182,7 @@ RUN mkdir -p "$GEM_HOME" "$BUNDLE_BIN" \
 	&& chmod 777 "$GEM_HOME" "$BUNDLE_BIN"
 
 #
-# Python 2.7.14
+# Python 2.7.15
 #
 
 # https://github.com/docker-library/python/blob/master/2.7/stretch/Dockerfile
@@ -248,11 +248,11 @@ RUN pip install --no-cache-dir virtualenv awscli azure-cli
 # https://github.com/aws/aws-codebuild-docker-images/blob/master/ubuntu/docker/17.09.0/Dockerfile
 #
 ENV DOCKER_BUCKET="download.docker.com" \
-	DOCKER_VERSION="18.06.1-ce" \
+	DOCKER_VERSION="18.09.0" \
 	DOCKER_CHANNEL="stable" \
-	DOCKER_SHA256="83be159cf0657df9e1a1a4a127d181725a982714a983b2bdcc0621244df93687" \
+	DOCKER_SHA256="08795696e852328d66753963249f4396af2295a7fe2847b839f7102e25e47cb9" \
 	DIND_COMMIT="52379fa76dee07ca038624d639d9e14f4fb719ff" \
-	DOCKER_COMPOSE_VERSION="1.22.0"
+	DOCKER_COMPOSE_VERSION="1.23.2"
 
 # From the docker:17.09
 RUN set -x \
@@ -286,8 +286,8 @@ RUN export CHROME_VERSION=stable_current &&\
 	rm /tmp/google-chrome-${CHROME_VERSION}_amd64.deb
 
 # Terraform
-ENV TERRAFORM_VERSION="0.11.8" \
-	TERRAFORM_SHA256="84ccfb8e13b5fce63051294f787885b76a1fedef6bdbecf51c5e586c9e20c9b7"
+ENV TERRAFORM_VERSION="0.11.11" \
+	TERRAFORM_SHA256="94504f4a67bad612b5c8e3a4b7ce6ca2772b3c1559630dfd71e9c519e3d6149c"
 
 RUN curl -fL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip &&\
 	echo "${TERRAFORM_SHA256} /tmp/terraform.zip" | sha256sum --check - &&\
@@ -295,6 +295,16 @@ RUN curl -fL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${TE
 	unzip /tmp/terraform.zip &&\
 	rm /tmp/terraform.zip &&\
 	chmod +x /usr/bin/terraform
+
+# Kubernetes Helm
+ENV HELM_VERSION="2.12.1" \
+	HELM_SHA256="891004bec55431b39515e2cedc4f4a06e93782aa03a4904f2bd742b168160451"
+
+RUN curl -fL -o /tmp/helm.tgz https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-linux-amd64.tar.gz &&\
+	echo "${HELM_SHA256} /tmp/helm.tgz" | sha256sum --check - &&\
+	tar -xzf /tmp/helm.tgz --strip-components=1 -C /usr/bin linux-amd64/helm linux-amd64/tiller &&\
+	rm /tmp/helm.tgz &&\
+	chmod +x /usr/bin/helm /usr/bin/tiller
 
 COPY *.sh /usr/local/bin/
 VOLUME /var/lib/docker
