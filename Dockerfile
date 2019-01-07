@@ -3,12 +3,14 @@ FROM buildpack-deps:stretch-scm
 ARG DOCKERFILE_PATH
 ARG SOURCE_COMMIT
 ARG SOURCE_TYPE
+ARG APT_PROXY
 
 USER root
 
 # Collect all of the packages needed for our composite of tools into one place
 
-RUN export DEBIAN_FRONTEND=noninteractive &&\
+RUN if [ -n "${APT_PROXY}" ]; then echo "Acquire::HTTP::Proxy \"${APT_PROXY}\";\nAcquire::HTTPS::Proxy false;\n" >> /etc/apt/apt.conf.d/01proxy; cat /etc/apt/apt.conf.d/01proxy; fi &&\
+    export DEBIAN_FRONTEND=noninteractive &&\
     apt-get update && apt-get install -yq --no-install-recommends \
 	apt-transport-https \
 	ca-certificates \
@@ -277,7 +279,8 @@ RUN set -x \
 	# Ensure docker-compose works
 	&& docker-compose version \
 	&& rm -rf /var/lib/apt/lists/* \
-	&& apt-get clean
+	&& apt-get clean \
+	&& rm -f /etc/apt/apt.conf.d/01proxy
 
 # Google Chrome for headless testing
 RUN export CHROME_VERSION=stable_current &&\
@@ -305,6 +308,9 @@ RUN curl -fL -o /tmp/helm.tgz https://storage.googleapis.com/kubernetes-helm/hel
 	tar -xzf /tmp/helm.tgz --strip-components=1 -C /usr/bin linux-amd64/helm linux-amd64/tiller &&\
 	rm /tmp/helm.tgz &&\
 	chmod +x /usr/bin/helm /usr/bin/tiller
+
+RUN curl -o /usr/bin/kubectl -L https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/linux/amd64/kubectl &&\
+    chmod +x /usr/bin/kubectl
 
 COPY *.sh /usr/local/bin/
 VOLUME /var/lib/docker

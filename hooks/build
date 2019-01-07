@@ -6,4 +6,5 @@ docker build \
     --build-arg "SOURCE_COMMIT=$GIT_SHA1" \
     --build-arg "DOCKERFILE_PATH=$DOCKERFILE_PATH" \
     --build-arg "SOURCE_TYPE=$SOURCE_TYPE" \
+    ${APT_PROXY:+--build-arg "APT_PROXY=${APT_PROXY}"} \
     -t $IMAGE_NAME .
