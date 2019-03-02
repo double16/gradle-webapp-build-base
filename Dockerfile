@@ -4,13 +4,18 @@ ARG DOCKERFILE_PATH
 ARG SOURCE_COMMIT
 ARG SOURCE_TYPE
 ARG APT_PROXY
+ARG DOCKER_VERSION
+ARG HELM_VERSION
+ARG K3S_VERSION
+
+ENV http_proxy="${APT_PROXY}" https_proxy="${APT_PROXY}"
 
 USER root
 
 # Collect all of the packages needed for our composite of tools into one place
 
+ENV DEBIAN_FRONTEND=noninteractive container=docker
 RUN if [ -n "${APT_PROXY}" ]; then echo "Acquire::HTTP::Proxy \"${APT_PROXY}\";\nAcquire::HTTPS::Proxy false;\n" >> /etc/apt/apt.conf.d/01proxy; cat /etc/apt/apt.conf.d/01proxy; fi &&\
-    export DEBIAN_FRONTEND=noninteractive &&\
     apt-get update && apt-get install -yq --no-install-recommends \
 	apt-transport-https \
 	ca-certificates \
@@ -40,6 +45,8 @@ RUN if [ -n "${APT_PROXY}" ]; then echo "Acquire::HTTP::Proxy \"${APT_PROXY}\";\
 	jq \
 	netcat-openbsd \
 	collectl colplot \
+	# Docker deps
+	e2fsprogs iptables xfsprogs kmod \
 	# Google Chrome deps
 	xvfb fontconfig libxss1 libappindicator3-1 libindicator7 libpango1.0-0 fonts-liberation xdg-utils gconf-service libasound2 libatk-bridge2.0-0 libgtk-3-0 libnspr4 libnss3 lsb-release
 
@@ -48,11 +55,22 @@ RUN if [ -n "${APT_PROXY}" ]; then echo "Acquire::HTTP::Proxy \"${APT_PROXY}\";\
 #
 # https://github.com/docker-library/openjdk/blob/master/8/jdk/Dockerfile
 
-# A few problems with compiling Java from source:
+
+# A few reasons for installing distribution-provided OpenJDK:
+#
 #  1. Oracle.  Licensing prevents us from redistributing the official JDK.
+#
 #  2. Compiling OpenJDK also requires the JDK to be installed, and it gets
-#       really hairy.
-RUN echo 'deb http://deb.debian.org/debian jessie-backports main' > /etc/apt/sources.list.d/jessie-backports.list
+#     really hairy.
+#
+#     For some sample build times, see Debian's buildd logs:
+#       https://buildd.debian.org/status/logs.php?pkg=openjdk-8
+
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+# 	bzip2 \
+# 	unzip \
+# 	xz-utils \
+# 	&& rm -rf /var/lib/apt/lists/*
 
 # Default to UTF-8 file.encoding
 ENV LANG C.UTF-8
@@ -60,10 +78,10 @@ ENV LANG C.UTF-8
 # add a simple script that can auto-detect the appropriate JAVA_HOME value
 # based on whether the JDK or only the JRE is installed
 RUN { \
-		echo '#!/bin/sh'; \
-		echo 'set -e'; \
-		echo; \
-		echo 'dirname "$(dirname "$(readlink -f "$(which javac || which java)")")"'; \
+	echo '#!/bin/sh'; \
+	echo 'set -e'; \
+	echo; \
+	echo 'dirname "$(dirname "$(readlink -f "$(which javac || which java)")")"'; \
 	} > /usr/local/bin/docker-java-home \
 	&& chmod +x /usr/local/bin/docker-java-home
 
@@ -71,29 +89,35 @@ RUN { \
 RUN ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-java-home
 ENV JAVA_HOME /docker-java-home
 
-# see https://bugs.debian.org/775775
-# and https://github.com/docker-library/java/issues/19#issuecomment-70546872
-ENV JAVA_VERSION="8u181" \
-	JAVA_DEBIAN_VERSION="8u181-b13-2~deb9u1" \
-	CA_CERTIFICATES_JAVA_VERSION="20170531+nmu1" \
-    _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
-
+ENV JAVA_VERSION 8u181
+ENV JAVA_DEBIAN_VERSION 8u181-b13-2~deb9u1
+ENV _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
 
 RUN set -ex; \
-	apt-get install -y \
-		openjdk-8-jdk="$JAVA_DEBIAN_VERSION" \
-		ca-certificates-java="$CA_CERTIFICATES_JAVA_VERSION" \
+	\
+	# deal with slim variants not having man page directories (which causes "update-alternatives" to fail)
+	if [ ! -d /usr/share/man/man1 ]; then \
+	mkdir -p /usr/share/man/man1; \
+	fi; \
+	\
+	apt-get update; \
+	apt-get install -y --no-install-recommends \
+	openjdk-8-jdk="$JAVA_DEBIAN_VERSION" \
 	; \
-# verify that "docker-java-home" returns what we expect
+	rm -rf /var/lib/apt/lists/*; \
+	\
+	# verify that "docker-java-home" returns what we expect
 	[ "$(readlink -f "$JAVA_HOME")" = "$(docker-java-home)" ]; \
-# update-alternatives so that future installs of other OpenJDK versions don't change /usr/bin/java
+	\
+	# update-alternatives so that future installs of other OpenJDK versions don't change /usr/bin/java
 	update-alternatives --get-selections | awk -v home="$(readlink -f "$JAVA_HOME")" 'index($3, home) == 1 { $2 = "manual"; print | "update-alternatives --set-selections" }'; \
-# ... and verify that it actually worked for one of the alternatives we care about
+	# ... and verify that it actually worked for one of the alternatives we care about
 	update-alternatives --query java | grep -q 'Status: manual'
 
-
-# see CA_CERTIFICATES_JAVA_VERSION notes above
-RUN /var/lib/dpkg/info/ca-certificates-java.postinst configure
+# If you're reading this and have any feedback on how this image could be
+# improved, please open an issue or a pull request so we can discuss it!
+#
+#   https://github.com/docker-library/openjdk/issues
 
 #
 # Gradle
@@ -250,22 +274,20 @@ RUN pip install --no-cache-dir virtualenv awscli azure-cli
 # https://github.com/aws/aws-codebuild-docker-images/blob/master/ubuntu/docker/17.09.0/Dockerfile
 #
 ENV DOCKER_BUCKET="download.docker.com" \
-	DOCKER_VERSION="18.09.0" \
+	DOCKER_VERSION="18.09.3" \
 	DOCKER_CHANNEL="stable" \
-	DOCKER_SHA256="08795696e852328d66753963249f4396af2295a7fe2847b839f7102e25e47cb9" \
 	DIND_COMMIT="52379fa76dee07ca038624d639d9e14f4fb719ff" \
 	DOCKER_COMPOSE_VERSION="1.23.2"
 
 # From the docker:17.09
 RUN set -x \
 	&& curl -fSL "https://${DOCKER_BUCKET}/linux/static/${DOCKER_CHANNEL}/x86_64/docker-${DOCKER_VERSION}.tgz" -o docker.tgz \
-	&& echo "${DOCKER_SHA256} *docker.tgz" | sha256sum -c - \
 	&& tar --extract --file docker.tgz --strip-components 1  --directory /usr/local/bin/ \
 	&& rm docker.tgz \
 	&& docker -v \
 	# From the docker dind 17.09
-	&& apt-get install -y --no-install-recommends \
-	e2fsprogs iptables xfsprogs xz-utils kmod \
+	# && apt-get install -y --no-install-recommends \
+	# e2fsprogs iptables xfsprogs xz-utils kmod \
 	&& addgroup docker \
 	&& usermod -G docker gradle \
 	# set up subuid/subgid so that "--userns-remap=default" works out-of-the-box
@@ -299,21 +321,28 @@ RUN curl -fL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/${TE
 	rm /tmp/terraform.zip &&\
 	chmod +x /usr/bin/terraform
 
-# Kubernetes Helm
-ENV HELM_VERSION="2.12.1" \
-	HELM_SHA256="891004bec55431b39515e2cedc4f4a06e93782aa03a4904f2bd742b168160451"
+# k3s
+RUN curl -fL -o /usr/bin/k3s https://github.com/rancher/k3s/releases/download/v0.1.0/k3s &&\
+    chmod +x /usr/bin/k3s &&\
+	curl -fL -o /opt/local-path-storage.yaml https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml &&\
+	echo '#!/bin/sh\nexec k3s kubectl $@' > /usr/bin/kubectl &&\
+	chmod +x /usr/bin/kubectl
 
+# Kubernetes Helm
 RUN curl -fL -o /tmp/helm.tgz https://storage.googleapis.com/kubernetes-helm/helm-v${HELM_VERSION}-linux-amd64.tar.gz &&\
-	echo "${HELM_SHA256} /tmp/helm.tgz" | sha256sum --check - &&\
 	tar -xzf /tmp/helm.tgz --strip-components=1 -C /usr/bin linux-amd64/helm linux-amd64/tiller &&\
 	rm /tmp/helm.tgz &&\
 	chmod +x /usr/bin/helm /usr/bin/tiller
 
-RUN curl -o /usr/bin/kubectl -L https://storage.googleapis.com/kubernetes-release/release/v1.10.3/bin/linux/amd64/kubectl &&\
-    chmod +x /usr/bin/kubectl
+ENV HELM_VERSION="${HELM_VERSION}" \
+	K3S_VERSION="${K3S_VERSION}" \
+    KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 
+COPY k3s-${K3S_VERSION}-${HELM_VERSION}.tar.gz /opt/
 COPY *.sh /usr/local/bin/
-VOLUME /var/lib/docker
+VOLUME ["/var/lib/docker"]
+
+ENV http_proxy="" https_proxy=""
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["gradle"]
@@ -321,8 +350,8 @@ CMD ["gradle"]
 LABEL maintainer="Patrick Double <pat@patdouble.com>" \
       org.label-schema.docker.dockerfile="$DOCKERFILE_PATH/Dockerfile" \
       org.label-schema.license="GPLv2" \
-      org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker (dind) ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION}, Terraform ${TERRAFORM_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
-      org.label-schema.url="https://bitbucket.org/double16/gradle-webapp-build-base" \
+	  org.label-schema.name="Gradle build base with Gradle ${GRADLE_VERSION}, OpenJDK ${JAVA_VERSION}, Docker (dind) ${DOCKER_VER}, Docker Compose ${DOCKER_COMPOSE_VER}, Kubernetes via K3S ${K3S_VERSION}, Ruby ${RUBY_VERSION}, Python ${PYTHON_VERSION}, Terraform ${TERRAFORM_VERSION} on Debian Jessie. Intended for building web applications based on the JVM and common frontend technologies." \
+	  org.label-schema.url="https://bitbucket.org/double16/gradle-webapp-build-base" \
       org.label-schema.vcs-ref=$SOURCE_COMMIT \
       org.label-schema.vcs-type="$SOURCE_TYPE" \
       org.label-schema.vcs-url="https://bitbucket.org/double16/gradle-webapp-build-base.git"
