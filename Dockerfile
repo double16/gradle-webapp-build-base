@@ -14,7 +14,8 @@ USER root
 
 # Collect all of the packages needed for our composite of tools into one place
 
-ENV DEBIAN_FRONTEND=noninteractive container=docker
+ENV DEBIAN_FRONTEND=noninteractive container=docker \
+	QT_QPA_PLATFORM="offscreen"
 RUN if [ -n "${APT_PROXY}" ]; then echo "Acquire::HTTP::Proxy \"${APT_PROXY}\";\nAcquire::HTTPS::Proxy false;\n" >> /etc/apt/apt.conf.d/01proxy; cat /etc/apt/apt.conf.d/01proxy; fi &&\
     apt-get update && apt-get install -yq --no-install-recommends \
 	apt-transport-https \
@@ -45,6 +46,7 @@ RUN if [ -n "${APT_PROXY}" ]; then echo "Acquire::HTTP::Proxy \"${APT_PROXY}\";\
 	jq \
 	netcat-openbsd \
 	collectl colplot \
+	phantomjs \
 	# Docker deps
 	e2fsprogs iptables xfsprogs kmod \
 	# Google Chrome deps
@@ -198,8 +200,8 @@ RUN gem install bundler --version "$BUNDLER_VERSION"
 
 # install things globally, for great justice
 # and don't create ".bundle" in all our apps
-ENV GEM_HOME /usr/local/bundle
-ENV BUNDLE_PATH="$GEM_HOME" \
+ENV GEM_HOME="/usr/local/bundle" \
+    BUNDLE_PATH="$GEM_HOME" \
 	BUNDLE_BIN="$GEM_HOME/bin" \
 	BUNDLE_SILENCE_ROOT_WARNING=1 \
 	BUNDLE_APP_CONFIG="$GEM_HOME" \
