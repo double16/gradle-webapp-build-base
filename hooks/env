@@ -11,4 +11,4 @@
 [ -n "$IMAGE_NAME" ]         || IMAGE_NAME=pdouble16/gradle-webapp-build-base:$SOURCE_BRANCH
 [ -n "$DOCKER_VERSION" ]     || DOCKER_VERSION="18.09.3"
 [ -n "$HELM_VERSION" ]       || HELM_VERSION="2.12.3"
-[ -n "$K3S_VERSION" ]        || K3S_VERSION="0.1.0"
+[ -n "$K3S_VERSION" ]        || K3S_VERSION="0.2.0"

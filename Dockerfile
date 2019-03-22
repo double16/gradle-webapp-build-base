@@ -14,8 +14,7 @@ USER root
 
 # Collect all of the packages needed for our composite of tools into one place
 
-ENV DEBIAN_FRONTEND=noninteractive container=docker \
-	QT_QPA_PLATFORM="offscreen"
+ENV DEBIAN_FRONTEND=noninteractive container=docker
 RUN if [ -n "${APT_PROXY}" ]; then echo "Acquire::HTTP::Proxy \"${APT_PROXY}\";\nAcquire::HTTPS::Proxy false;\n" >> /etc/apt/apt.conf.d/01proxy; cat /etc/apt/apt.conf.d/01proxy; fi &&\
     apt-get update && apt-get install -yq --no-install-recommends \
 	apt-transport-https \
@@ -46,7 +45,6 @@ RUN if [ -n "${APT_PROXY}" ]; then echo "Acquire::HTTP::Proxy \"${APT_PROXY}\";\
 	jq \
 	netcat-openbsd \
 	collectl colplot \
-	phantomjs \
 	# Docker deps
 	e2fsprogs iptables xfsprogs kmod \
 	# Google Chrome deps
@@ -92,7 +90,7 @@ RUN ln -svT "/usr/lib/jvm/java-8-openjdk-$(dpkg --print-architecture)" /docker-j
 ENV JAVA_HOME /docker-java-home
 
 ENV JAVA_VERSION 8u181
-ENV JAVA_DEBIAN_VERSION 8u181-b13-2~deb9u1
+ENV JAVA_DEBIAN_VERSION 8u212-b01-1~deb9u1
 ENV _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap"
 
 RUN set -ex; \

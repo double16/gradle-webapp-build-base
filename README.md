@@ -9,7 +9,7 @@ Gradle build base intended for building web applications based on the JVM and co
 * Docker
 * Docker Compose
 * Kubernetes via k3s, Helm
-* PhantomJS
+* Google Chrome
 
 The Dockerfile is heavily a combination of the Docker `library` repositories of `openjdk`, `gradle`, `ruby`, `python`.
 

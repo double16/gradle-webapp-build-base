@@ -1,0 +1,19 @@
+version: "2.4"
+
+volumes:
+  docker:
+  k3s-server:
+
+services:
+  ci:
+    image: pdouble16/gradle-webapp-build-base:latest
+    privileged: true
+    # consistent hostname is necessary for k3s to work across restarts
+    hostname: "ci"
+    # necessary for overlay storage driver to work
+    volumes:
+      - docker:/var/lib/docker
+      - k3s-server:/var/lib/rancher/k3s
+    tmpfs:
+      - /run
+      - /var/run
